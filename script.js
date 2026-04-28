@@ -3,8 +3,8 @@ let students = JSON.parse(localStorage.getItem('qr_students')) || [];
 let teachers = JSON.parse(localStorage.getItem('qr_teachers')) || [];
 let attendanceLog = JSON.parse(localStorage.getItem('qr_attendance')) || [];
 let html5QrScanner = null;
-const SYSTEM_PASSWORD = "123456";
-const LOGIN_CREDENTIALS = "123456789";
+const SYSTEM_PASSWORD = "123";
+const LOGIN_CREDENTIALS = "123";
 let pendingAuthAction = null;
 let liveStream = null;
 
