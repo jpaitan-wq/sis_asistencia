@@ -9,7 +9,15 @@ let pendingAuthAction = null;
 let liveStream = null;
 
 // ---- CONFIGURACIÓN GOOGLE SHEETS ----
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxs1judP1o6QoBE7P2scuBmeBQpWt-71tapmtQk4rV-Zb4fRjB0r7I9WwmyJS8BsmZc/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzHbfqajkyq1AknGuP78FWmLP5b7OHV-GKPw-IwsNc_9Xqa_4dHDk8rLszbTizNwpnNnw/exec";
+
+// ---- PROTECCIÓN DE CÓDIGO (Anti-Copia e Inspección) ----
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.onkeydown = function(e) {
+    if (e.keyCode == 123) return false;
+    if (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 67 || e.keyCode == 74)) return false;
+    if (e.ctrlKey && e.keyCode == 85) return false;
+};
 
 // Función para guardar localmente
 function saveToLocalStorage() {
