@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sistema de Asistencia QR</title>
+    <link rel="icon" type="image/png" href="iconosis.png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: { guindo: '#630d16', guindoHover: '#4a0a10', plomo: '#71717a', darkBg: '#09090b', darkCard: '#18181b' }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-[#fcfcfc] text-zinc-800 dark:bg-darkBg dark:text-zinc-200 min-h-screen flex flex-col font-sans transition-colors duration-300 overflow-x-hidden">
+
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-screen" class="fixed inset-0 bg-guindo z-[10000] flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-darkCard p-8 sm:p-12 rounded-[3rem] max-w-md w-full shadow-2xl text-center animate-in fade-in zoom-in duration-500">
+            <img src="LOGOSISTEMA.png" class="h-16 mx-auto mb-8 object-contain">
+            <h2 class="text-2xl font-black text-guindo uppercase tracking-tighter mb-2">Acceso al Sistema</h2>
+            <p class="text-[10px] text-plomo font-bold uppercase mb-8 tracking-widest">Ingrese sus credenciales</p>
+            
+            <div class="space-y-4">
+                <div class="text-left">
+                    <label class="text-[10px] font-black text-plomo ml-4 uppercase">Usuario</label>
+                    <input type="text" id="login-user" class="w-full p-4 rounded-2xl border-2 bg-zinc-50 dark:bg-zinc-800 outline-none font-bold focus:border-guindo transition-all">
+                </div>
+                <div class="text-left">
+                    <label class="text-[10px] font-black text-plomo ml-4 uppercase">Contraseña</label>
+                    <input type="password" id="login-pass" class="w-full p-4 rounded-2xl border-2 bg-zinc-50 dark:bg-zinc-800 outline-none font-bold focus:border-guindo transition-all">
+                </div>
+                <button onclick="window.validateLogin()" class="w-full bg-guindo text-white py-5 rounded-2xl font-black uppercase text-sm shadow-xl shadow-guindo/30 hover:scale-[1.02] transition-transform mt-4">Entrar al Sistema</button>
+                <!-- MENSAJE DE ERROR LOCAL -->
+                <div id="login-error-msg" class="hidden mt-4 text-[10px] font-black text-red-600 uppercase tracking-widest animate-pulse">¡Credenciales Incorrectas!</div>
+            </div>
+
+            <!-- FOOTER PEQUEÑO LOGIN -->
+            <div class="mt-10 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                <p class="text-[8px] font-black text-plomo uppercase tracking-[0.2em] mb-2">Desarrollado por:</p>
+                <h4 class="text-xs font-black text-guindo dark:text-white uppercase mb-4">SUMAQ RURAY DATA</h4>
+                <a href="https://wa.me/51931470835" target="_blank" class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-full text-[9px] font-black uppercase border border-emerald-100 hover:bg-emerald-100 transition-colors">
+                    <i data-lucide="phone" class="w-3 h-3"></i>
+                    WhatsApp: 931470835
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER COMPACTO RESPONSIVE -->
+    <header class="bg-white/80 dark:bg-darkBg/80 backdrop-blur-md border-b sticky top-0 z-50">
+        <div class="container mx-auto px-4 max-w-5xl pt-4">
+            <div class="flex justify-between items-center mb-4 gap-2">
+                <img src="LOGOSISTEMA.png" id="logo-img" class="h-8 sm:h-12 w-auto object-contain">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <!-- INDICADOR DE CONEXIÓN -->
+                    <div class="flex items-center gap-1.5 px-3 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                        <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500"></div>
+                        <span id="status-text" class="text-[8px] font-black uppercase tracking-tighter hidden sm:inline">Offline</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-sm bg-zinc-100 dark:bg-zinc-800 px-3 sm:px-5 py-2 rounded-full border border-zinc-200 dark:border-zinc-700">
+                        <i data-lucide="clock" class="w-3 h-3 sm:w-4 sm:h-4 text-plomo"></i>
+                        <span id="current-time" class="font-bold">00:00:00</span>
+                    </div>
+                    <button onclick="window.toggleTheme()" class="p-2 sm:p-3 rounded-full text-plomo hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"><i data-lucide="moon" id="theme-icon" class="w-5 h-5 sm:w-6 sm:h-6"></i></button>
+                </div>
+            </div>
+            
+            <!-- MENÚ SUPERIOR CENTRAL RESPONSIVE -->
+            <nav class="flex justify-center pb-3">
+                <div class="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-full border gap-0.5 sm:gap-1 overflow-x-auto no-scrollbar max-w-full">
+                    <button onclick="window.switchTab('scanner')" class="nav-btn px-4 sm:px-8 py-2 rounded-full font-bold text-[10px] sm:text-sm flex items-center gap-1.5 sm:gap-2 whitespace-nowrap transition-all" id="nav-scanner"><i data-lucide="scan" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>ESCANEAR</button>
+                    <button onclick="window.switchTab('register')" class="nav-btn px-4 sm:px-8 py-2 rounded-full font-bold text-[10px] sm:text-sm flex items-center gap-1.5 sm:gap-2 whitespace-nowrap transition-all" id="nav-register"><i data-lucide="users" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>ALUMNOS</button>
+                    <button onclick="window.switchTab('teachers')" class="nav-btn px-4 sm:px-8 py-2 rounded-full font-bold text-[10px] sm:text-sm flex items-center gap-1.5 sm:gap-2 whitespace-nowrap transition-all" id="nav-teachers"><i data-lucide="graduation-cap" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>DOCENTES</button>
+                    <button onclick="window.switchTab('report')" class="nav-btn px-4 sm:px-8 py-2 rounded-full font-bold text-[10px] sm:text-sm flex items-center gap-1.5 sm:gap-2 whitespace-nowrap transition-all" id="nav-report"><i data-lucide="file-text" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>REPORTES</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto p-4 max-w-5xl mb-10">
+        <div id="toast-container" class="fixed top-24 right-4 z-[9999] flex flex-col gap-3 max-w-[calc(100%-2rem)]"></div>
+
+        <!-- ESCANER -->
+        <section id="tab-scanner" class="tab-content active space-y-4 sm:space-y-6">
+            <div class="p-3 sm:p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="text-[9px] sm:text-xs text-amber-800 dark:text-amber-400 font-bold uppercase text-center sm:text-left">ASISTIÓ < 8:20 | TARDE > 8:20 | FALTA 11:00 AM</div>
+                <input type="time" id="simulated-time" oninput="window.renderReport()" class="p-2 text-sm rounded-xl border bg-white dark:bg-darkCard outline-none w-full sm:w-auto">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div class="bg-white dark:bg-darkCard p-4 sm:p-5 rounded-[2rem] border flex flex-col items-center shadow-sm">
+                    <div id="reader" class="w-full aspect-square max-w-sm rounded-2xl overflow-hidden border bg-black shadow-inner"></div>
+                    <div class="w-full flex flex-col gap-2 mt-4">
+                        <button id="btn-start-scan" onclick="window.startScanner()" class="bg-guindo text-white py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm hover:bg-guindoHover shadow-lg shadow-guindo/20">ACTIVAR CÁMARA</button>
+                        <button id="btn-stop-scan" onclick="window.stopScanner()" class="bg-red-50 text-red-600 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm hidden border border-red-100">DETENER CÁMARA</button>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-darkCard p-6 sm:p-8 rounded-[2rem] border flex flex-col justify-center items-center text-center min-h-[300px] shadow-sm">
+                    <div id="scan-placeholder" class="text-zinc-400">
+                        <i data-lucide="scan" class="w-12 h-12 mb-4 opacity-20 mx-auto"></i>
+                        <p class="font-bold text-sm">Esperando lectura...</p>
+                    </div>
+                    <div id="scan-result" class="hidden w-full animate-in zoom-in-95">
+                        <img id="res-photo" class="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full object-cover mb-4 border-4 border-white shadow-xl hidden">
+                        <div id="res-no-photo" class="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 border-4 border-white shadow-lg"><i data-lucide="user" class="w-10 h-10 sm:w-12 sm:h-12 text-zinc-300"></i></div>
+                        <h3 id="res-name" class="text-lg sm:text-2xl font-black uppercase text-guindo tracking-tight px-2">--</h3>
+                        <div id="res-status-badge" class="mt-4 inline-block px-6 py-2.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-md">--</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- REGISTRO ALUMNOS -->
+        <section id="tab-register" class="tab-content hidden space-y-6">
+            <div class="bg-white dark:bg-darkCard p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border shadow-sm">
+                <h3 class="font-black text-guindo mb-6 uppercase text-xs sm:text-sm tracking-widest border-l-4 border-guindo pl-4">Registro Estudiantes</h3>
+                <form onsubmit="window.addStudent(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                    <input type="text" id="stu-id" placeholder="DNI (8 dígitos)" required maxlength="8" class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 numeric-only outline-none text-sm font-medium">
+                    <input type="text" id="stu-names" placeholder="Nombres" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 alpha-only uppercase outline-none text-sm font-medium">
+                    <input type="text" id="stu-surnames" placeholder="Apellidos" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 alpha-only uppercase outline-none text-sm font-medium">
+                    <div class="grid grid-cols-2 gap-2 sm:gap-3">
+                        <select id="stu-grade" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 cursor-pointer outline-none text-sm font-medium"><option value="" disabled selected>GRADO</option><option value="1°">1°</option><option value="2°">2°</option><option value="3°">3°</option><option value="4°">4°</option><option value="5°">5°</option><option value="6°">6°</option></select>
+                        <select id="stu-section" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 cursor-pointer outline-none text-sm font-medium"><option value="" disabled selected>SECCIÓN</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F</option><option value="G">G</option><option value="H">H</option><option value="I">I</option><option value="J">J</option></select>
+                    </div>
+                    <input type="text" id="stu-institution" placeholder="Institución Educativa" required class="md:col-span-2 p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 uppercase outline-none text-sm font-medium">
+                    <div class="md:col-span-2 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-dashed flex flex-col gap-4">
+                        <span class="text-[10px] font-black text-plomo uppercase">Fotografía Alumno</span>
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div id="stu-photo-preview" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white border flex items-center justify-center overflow-hidden shadow-inner"><i data-lucide="image" class="w-6 h-6 sm:w-8 sm:h-8 text-zinc-200"></i></div>
+                            <input type="file" id="stu-photo-file" accept="image/*" class="hidden">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="document.getElementById('stu-photo-file').click()" class="bg-white border px-4 sm:px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase shadow-sm">SUBIR</button>
+                                <button type="button" onclick="window.openLiveCamera('stu-photo-base64', 'stu-photo-preview')" class="bg-guindo text-white px-4 sm:px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase shadow-lg shadow-guindo/20">CÁMARA</button>
+                            </div>
+                            <input type="hidden" id="stu-photo-base64">
+                        </div>
+                    </div>
+                    <button type="submit" class="md:col-span-2 bg-guindo text-white p-4 rounded-xl sm:rounded-2xl font-black uppercase shadow-xl shadow-guindo/30 text-xs sm:text-sm hover:scale-[1.01] transition-transform">Guardar Registro Alumno</button>
+                </form>
+            </div>
+            <div class="bg-white dark:bg-darkCard rounded-[2rem] border overflow-hidden shadow-sm">
+                <div class="p-4 bg-zinc-50 dark:bg-zinc-800 border-b flex justify-between items-center font-bold text-[10px] uppercase text-plomo"><span>Estudiantes</span><span id="student-count" class="bg-guindo text-white px-3 py-1 rounded-full">0</span></div>
+                <div class="table-container">
+                    <table class="w-full text-sm text-left"><tbody id="students-table-body" class="divide-y"></tbody></table>
+                </div>
+            </div>
+        </section>
+
+        <!-- REGISTRO DOCENTES -->
+        <section id="tab-teachers" class="tab-content hidden space-y-6">
+            <div class="bg-white dark:bg-darkCard p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border shadow-sm">
+                <h3 class="font-black text-guindo mb-6 uppercase text-xs sm:text-sm tracking-widest border-l-4 border-guindo pl-4">Registro Docentes</h3>
+                <form onsubmit="window.addTeacher(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                    <input type="text" id="tea-id" placeholder="DNI Docente" required maxlength="8" class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 numeric-only outline-none text-sm font-medium">
+                    <input type="text" id="tea-names" placeholder="Nombres" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 alpha-only uppercase outline-none text-sm font-medium">
+                    <input type="text" id="tea-surnames" placeholder="Apellidos" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 alpha-only uppercase outline-none text-sm font-medium">
+                    <div class="grid grid-cols-2 gap-3">
+                        <select id="tea-grade" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 text-sm cursor-pointer outline-none font-medium"><option value="" disabled selected>GRADO CARGO</option><option value="1°">1°</option><option value="2°">2°</option><option value="3°">3°</option><option value="4°">4°</option><option value="5°">5°</option><option value="6°">6°</option></select>
+                        <select id="tea-section" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 text-sm cursor-pointer outline-none font-medium"><option value="" disabled selected>SECCIÓN CARGO</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F</option><option value="G">G</option><option value="H">H</option><option value="I">I</option><option value="J">J</option></select>
+                    </div>
+                    <div class="md:col-span-2 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-dashed flex flex-col gap-4">
+                        <span class="text-[10px] font-black text-plomo uppercase">Fotografía Docente</span>
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div id="tea-photo-preview" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white border flex items-center justify-center overflow-hidden shadow-inner"><i data-lucide="image" class="w-6 h-6 sm:w-8 sm:h-8 text-zinc-200"></i></div>
+                            <input type="file" id="tea-photo-file" accept="image/*" class="hidden">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="document.getElementById('tea-photo-file').click()" class="bg-white border px-4 sm:px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase shadow-sm">SUBIR</button>
+                                <button type="button" onclick="window.openLiveCamera('tea-photo-base64', 'tea-photo-preview')" class="bg-guindo text-white px-4 sm:px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase shadow-lg shadow-guindo/20">CÁMARA</button>
+                            </div>
+                            <input type="hidden" id="tea-photo-base64">
+                        </div>
+                    </div>
+                    <button type="submit" class="md:col-span-2 bg-zinc-900 text-white p-4 rounded-xl sm:rounded-2xl font-black uppercase shadow-xl text-xs sm:text-sm">Guardar Registro Docente</button>
+                </form>
+            </div>
+            <div class="bg-white dark:bg-darkCard rounded-[2rem] border overflow-hidden shadow-sm">
+                <div class="p-4 bg-zinc-50 dark:bg-zinc-800 border-b flex justify-between items-center font-bold text-xs uppercase text-plomo"><span>Docentes</span><span id="teacher-count" class="bg-zinc-900 text-white px-3 py-1 rounded-full">0</span></div>
+                <div class="table-container">
+                    <table class="w-full text-sm text-left"><tbody id="teachers-table-body" class="divide-y"></tbody></table>
+                </div>
+            </div>
+        </section>
+
+        <!-- REPORTES RESPONSIVE -->
+        <section id="tab-report" class="tab-content hidden space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="w-full sm:w-auto">
+                    <h2 class="text-xl sm:text-2xl font-black text-guindo uppercase tracking-tighter">Reporte Asistencia</h2>
+                    <p id="report-teacher-name" class="text-[10px] sm:text-sm font-bold text-plomo mt-1 uppercase">Docente: Sin selección</p>
+                </div>
+                <button onclick="window.generatePDF()" class="w-full sm:w-auto bg-guindo text-white px-6 py-3 rounded-2xl font-black text-xs shadow-xl shadow-guindo/30 uppercase">Exportar REPORTE</button>
+            </div>
+            <div class="bg-white dark:bg-darkCard rounded-[2rem] sm:rounded-[2.5rem] border overflow-hidden shadow-lg">
+                <div class="table-container">
+                    <table class="w-full text-xs text-left min-w-[600px]" id="report-table">
+                        <thead class="bg-zinc-50 dark:bg-zinc-800 text-plomo uppercase border-b text-[10px] font-black">
+                            <tr>
+                                <th class="px-4 py-4 sm:px-6 sm:py-5">Estudiante<br><input type="text" id="f-name" oninput="window.renderReport()" class="w-full border p-2 rounded-xl mt-2 font-normal uppercase outline-none focus:ring-2 focus:ring-guindo/10"></th>
+                                <th class="px-4 py-4 sm:px-6 sm:py-5 w-24 sm:w-32">Grado<br><select id="f-grade" onchange="window.renderReport()" class="w-full border p-2 rounded-xl mt-2 font-normal outline-none"><option value="">TODOS</option><option value="1°">1°</option><option value="2°">2°</option><option value="3°">3°</option><option value="4°">4°</option><option value="5°">5°</option><option value="6°">6°</option></select></th>
+                                <th class="px-4 py-4 sm:px-6 sm:py-5 w-24 sm:w-32">Secc<br><select id="f-section" onchange="window.renderReport()" class="w-full border p-2 rounded-xl mt-2 font-normal outline-none"><option value="">TODOS</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F</option><option value="G">G</option><option value="H">H</option><option value="I">I</option><option value="J">J</option></select></th>
+                                <th class="px-4 py-4 sm:px-6 sm:py-5 w-40 sm:w-48">Fecha<br><input type="date" id="f-date" onchange="window.renderReport()" class="w-full border p-2 rounded-xl mt-2 font-normal outline-none"></th>
+                                <th class="px-4 py-4 sm:px-6 sm:py-5 w-32 sm:w-40">Estado<br><select id="f-status" onchange="window.renderReport()" class="w-full border p-2 rounded-xl mt-2 font-normal outline-none"><option value="">TODOS</option><option value="ASISTIÓ">ASISTIÓ</option><option value="TARDE">TARDE</option><option value="FALTA">FALTA</option><option value="FECHA FUTURA">FECHA FUTURA</option><option value="FIN DE SEMANA">FIN DE SEMANA</option></select></th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-table-body" class="divide-y font-medium text-xs sm:text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- PIE DE PÁGINA PROMINENTE -->
+    <footer class="py-12 text-center border-t-4 border-guindo bg-white dark:bg-darkBg mt-auto relative z-10">
+        <div class="container mx-auto px-4">
+            <p class="text-[10px] sm:text-xs font-black text-plomo uppercase tracking-[0.4em] mb-3">Diseñado y Desarrollado por:</p>
+            <h4 class="text-2xl sm:text-4xl font-black text-guindo dark:text-white tracking-tighter uppercase mb-4">SUMAQ RURAY DATA</h4>
+            <a href="https://wa.me/51931470835" target="_blank" class="inline-flex items-center justify-center gap-3 bg-emerald-500 text-white px-8 py-4 rounded-2xl hover:bg-emerald-600 hover:scale-105 transition-all duration-300 shadow-xl shadow-emerald-500/20 group">
+                <i data-lucide="phone" class="w-5 h-5 fill-current"></i>
+                <span class="text-sm sm:text-base font-black tracking-widest">WhatsApp: 931470835</span>
+            </a>
+            <p class="mt-6 text-[9px] text-plomo font-bold uppercase opacity-50">© 2026 Todos los derechos reservados</p>
+        </div>
+    </footer>
+
+    <!-- MODALES RESPONSIVE -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[1000] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div id="auth-modal-content" class="bg-white dark:bg-darkCard p-6 sm:p-10 rounded-[2.5rem] sm:rounded-[3rem] max-w-sm w-full text-center transform scale-95 transition-transform duration-300 shadow-2xl">
+            <h3 class="font-black text-lg sm:text-xl mb-2 uppercase">Seguridad</h3>
+            <p class="text-[10px] text-plomo mb-6 uppercase font-bold">Ingrese Clave Administrador</p>
+            <input type="password" id="auth-password" class="w-full p-4 sm:p-5 rounded-2xl border-2 bg-zinc-50 dark:bg-zinc-800 outline-none text-center font-black text-xl sm:text-2xl mb-6 focus:border-guindo transition-colors">
+            <div class="flex gap-2">
+                <button onclick="window.closeAuthModal()" class="w-full py-4 text-xs font-black text-plomo uppercase">Cancelar</button>
+                <button onclick="window.verifyAuth()" class="w-full py-4 text-xs font-black bg-zinc-900 text-white rounded-2xl uppercase">Verificar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT RESPONSIVE -->
+    <div id="edit-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[900] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300 overflow-y-auto">
+        <div id="edit-modal-content" class="bg-white dark:bg-darkCard p-6 sm:p-10 rounded-[2.5rem] sm:rounded-[3rem] max-w-2xl w-full transform scale-95 transition-transform duration-300 shadow-2xl my-8">
+            <h3 class="font-black text-xl sm:text-2xl mb-6 text-guindo uppercase border-b pb-4">Editar Información</h3>
+            <form onsubmit="window.saveEdit(event)" class="space-y-4 sm:space-y-6 text-left">
+                <input type="hidden" id="edit-type"><input type="hidden" id="edit-original-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div class="md:col-span-2"><label class="text-[10px] font-black text-plomo ml-2 uppercase">DNI (8 dígitos)</label><input type="text" id="edit-id" required maxlength="8" class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 outline-none w-full numeric-only mt-1 font-bold"></div>
+                    <div><label class="text-[10px] font-black text-plomo ml-2 uppercase">Nombres</label><input type="text" id="edit-nombres" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 alpha-only uppercase outline-none w-full mt-1 font-bold"></div>
+                    <div><label class="text-[10px] font-black text-plomo ml-2 uppercase">Apellidos</label><input type="text" id="edit-apellidos" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 alpha-only uppercase outline-none w-full mt-1 font-bold"></div>
+                    <div><label class="text-[10px] font-black text-plomo ml-2 uppercase">Grado</label><select id="edit-grado" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 outline-none w-full mt-1 font-bold"><option value="1°">1°</option><option value="2°">2°</option><option value="3°">3°</option><option value="4°">4°</option><option value="5°">5°</option><option value="6°">6°</option></select></div>
+                    <div><label class="text-[10px] font-black text-plomo ml-2 uppercase">Sección</label><select id="edit-seccion" required class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 outline-none w-full mt-1 font-bold"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option></select></div>
+                </div>
+                <div id="edit-inst-container"><label class="text-[10px] font-black text-plomo ml-2 uppercase">Institución</label><input type="text" id="edit-institucion" class="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl border dark:bg-zinc-800 uppercase outline-none mt-1 font-bold"></div>
+                <div class="flex items-center gap-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-3xl px-4 sm:px-6 border border-dashed">
+                    <div id="edit-photo-preview" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-white border flex items-center justify-center overflow-hidden shadow-inner"></div>
+                    <div class="flex flex-col gap-2">
+                        <span class="text-[9px] font-black text-plomo uppercase">Actualizar Foto</span>
+                        <div class="flex gap-2">
+                            <input type="file" id="edit-photo-file" accept="image/*" class="hidden">
+                            <button type="button" onclick="document.getElementById('edit-photo-file').click()" class="bg-white border px-4 py-2 rounded-lg text-[9px] font-black uppercase">Subir</button>
+                            <button type="button" onclick="window.openLiveCamera('edit-photo-base64', 'edit-photo-preview')" class="bg-guindo/5 text-guindo border border-guindo/10 px-4 py-2 rounded-lg text-[9px] font-black uppercase">CÁMARA</button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="edit-photo-base64">
+                </div>
+                <div class="pt-6 flex gap-3">
+                    <button type="button" onclick="window.closeEditModal()" class="w-full py-4 text-xs font-black text-plomo uppercase">Cancelar</button>
+                    <button type="submit" class="w-full py-4 bg-guindo text-white rounded-xl sm:rounded-2xl font-black uppercase text-xs">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL QR RESPONSIVE -->
+    <div id="qr-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300 overflow-y-auto">
+        <div class="bg-white dark:bg-darkCard p-4 sm:p-8 rounded-[2.5rem] max-w-lg w-full text-center relative shadow-2xl border border-white/20">
+            <button onclick="window.closeQRModal()" class="absolute top-4 right-4 p-2 text-plomo hover:text-red-500 transition-colors z-10 bg-white/80 rounded-full shadow-sm"><i data-lucide="x" class="w-5 h-5 sm:w-6 sm:h-6"></i></button>
+            
+            <!-- CONTENEDOR DEL CARNET (9.5x6 cm) -->
+            <div class="flex justify-center mb-6 overflow-x-auto py-4">
+                <div id="carnet-design" class="carnet-base carnet-student overflow-hidden">
+                    <!-- Parte Izquierda: QR -->
+                    <div class="carnet-left">
+                        <div id="modal-qr-container" class="bg-white p-1 rounded-lg"></div>
+                        <div class="mt-3 flex flex-col items-center">
+                            <span class="text-[8px] font-black text-zinc-400 uppercase">DNI / ID</span>
+                            <span id="carnet-dni" class="text-[10px] font-bold text-zinc-800">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Parte Derecha: Foto y Datos -->
+                    <div class="carnet-right">
+                        <!-- Nombre IE Vertical en el borde derecho -->
+                        <div class="carnet-ie-vertical-box">
+                            <span id="carnet-ie-vertical">IE SEÑOR DE LA AGONÍA</span>
+                        </div>
+                        
+                        <div id="carnet-photo" class="flex items-center justify-center">
+                            <i data-lucide="user" class="w-8 h-8 text-zinc-300"></i>
+                        </div>
+
+                        <div class="carnet-data text-left">
+                            <span id="carnet-type-label" class="text-[9px] font-black uppercase opacity-80 mb-1 tracking-wider">CARNET ESTUDIANTIL</span>
+                            
+                            <div class="mb-1">
+                                <span class="carnet-label block">Nombres</span>
+                                <span id="carnet-names" class="carnet-value">--</span>
+                            </div>
+
+                            <div class="mb-1">
+                                <span class="carnet-label block">Apellidos</span>
+                                <span id="carnet-surnames" class="carnet-value">--</span>
+                            </div>
+
+                            <div class="mt-1">
+                                <span class="carnet-label block">Grado / Sec</span>
+                                <div class="carnet-value"><span id="carnet-grado">--</span> "<span id="carnet-seccion">--</span>"</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="window.downloadCarnet()" class="w-full bg-zinc-900 text-white py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm uppercase shadow-2xl flex items-center justify-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                Descargar Carnet (PNG)
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL CAMARA VIVO RESPONSIVE -->
+    <div id="live-camera-modal" class="fixed inset-0 bg-black/95 z-[2000] hidden flex-col items-center justify-center p-2 sm:p-4">
+        <div class="relative w-full max-w-md">
+            <video id="live-video" class="w-full rounded-[2.5rem] bg-zinc-900 aspect-square object-cover shadow-2xl border-4 border-white/5" autoplay playsinline></video>
+            <div class="absolute bottom-6 sm:bottom-10 left-0 right-0 flex justify-center gap-6 sm:gap-12">
+                <button onclick="window.closeLiveCamera()" class="p-4 sm:p-5 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-2xl border border-white/10 transition-all"><i data-lucide="x" class="w-6 h-6 sm:w-8 sm:h-8"></i></button>
+                <button onclick="window.captureLivePhoto()" class="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full border-4 sm:border-8 border-white/20 hover:scale-90 transition-transform shadow-2xl"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
